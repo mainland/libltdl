@@ -1,0 +1,3 @@
+include-dirs: @EXTRA_INCLUDE_DIRS@
+extra-lib-dirs: @EXTRA_LIB_DIRS@
+extra-libraries: @LTDL_LIBS@
