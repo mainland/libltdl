@@ -10,6 +10,7 @@ stability:      alpha
 homepage:       http://www.eecs.harvard.edu/~mainland/projects/libffi
 category:       Foreign
 synopsis:       FFI interface to libltdl
+description:    This package provides an interface to GNU libtldl.
 
 build-type:     Custom
 
