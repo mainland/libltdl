@@ -20,9 +20,6 @@ AC_ARG_WITH([extra-libraries],
 AC_SUBST(EXTRA_INCLUDE_DIRS)
 AC_SUBST(EXTRA_LIB_DIRS)
 
-CPPFLAGS="$CPPFLAGS -I$EXTRA_INCLUDE_DIRS"
-LDFLAGS="$LDFLAGS -L$EXTRA_LIB_DIRS"
-
 dnl--------------------------------------------------------------------
 dnl Find libltdl
 dnl--------------------------------------------------------------------
