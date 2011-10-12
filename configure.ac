@@ -7,7 +7,7 @@ dnl Extra include and library directories
 dnl--------------------------------------------------------------------
 AC_ARG_WITH([extra-includes],
   [AC_HELP_STRING([--with-extra-includes],
-    [directory containign includes])],
+    [directory containing includes])],
     [EXTRA_INCLUDE_DIRS=$withval; CPPFLAGS="$CPPFLAGS -I$withval"],
     [EXTRA_INCLUDE_DIRS=])
 
