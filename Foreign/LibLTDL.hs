@@ -31,6 +31,8 @@
 module Foreign.LibLTDL (
     Advice(..),
     DLException(..),
+    DLHandle(..),
+    SearchPath,
     dlInit,
     dlExit,
     dlOpen,
