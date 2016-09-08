@@ -1,13 +1,14 @@
 name:           libltdl
-version:        0.1.0.3
+version:        0.1.1
 cabal-version:  >= 1.8
 license:        BSD3
 license-file:   LICENSE
 copyright:      (c) 2011 Harvard University
-author:         Geoffrey Mainland <mainland@eecs.harvard.edu>
+                (c) 2016 Drexel University
+author:         Geoffrey Mainland <mainland#drexel.edu>
 maintainer:     mainland@eecs.harvard.edu
 stability:      alpha
-homepage:       http://www.eecs.harvard.edu/~mainland/projects/libffi
+homepage:       https://github.com/mainland/libltdl
 category:       Foreign
 synopsis:       FFI interface to libltdl
 description:    This package provides an interface to GNU libtldl.
