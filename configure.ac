@@ -3,6 +3,27 @@ AC_INIT([Haskell libltdl interface], [0.1], [mainland@eecs.harvard.edu], [libltd
 AC_CONFIG_SRCDIR([Foreign/LibLTDL.hs])
 
 dnl--------------------------------------------------------------------
+dnl Specify which gcc to use
+dnl--------------------------------------------------------------------
+AC_ARG_WITH([gcc],
+  [AC_HELP_STRING([--with-gcc],
+    [which gcc to use])],
+    [if [[ -f `which cygpath` ]]; then
+         CC=`cygpath -m "$withval"`;
+     else
+         CC="$withval";
+     fi],
+    [])
+
+dnl--------------------------------------------------------------------
+dnl Find the Haskell compiler
+dnl--------------------------------------------------------------------
+AC_ARG_WITH([compiler],
+	    [AC_HELP_STRING([--with-compiler], [path to Haskell compiler])],
+            [HC=$withval],
+            [AC_PATH_PROG(HC, ghc)])
+            
+dnl--------------------------------------------------------------------
 dnl Extra include and library directories
 dnl--------------------------------------------------------------------
 AC_ARG_WITH([extra-includes],
