@@ -34,7 +34,7 @@ library
 executable sin
   build-depends:
     base >=4 && <5,
-    libltdl >=0.1 && <0.2
+    libltdl
 
   main-is: 	   Main.hs
   hs-source-dirs:  examples/sin
