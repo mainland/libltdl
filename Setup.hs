@@ -6,3 +6,6 @@ import System.Process (system)
 
 main :: IO ()
 main = defaultMainWithHooks autoconfUserHooks
+
+
+Changed for test
