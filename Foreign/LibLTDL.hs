@@ -61,7 +61,7 @@ type SearchPath = [FilePath]
 foreign import ccall "wrapper"
     mkCallback :: (CString -> Ptr a -> IO CInt) -> IO (FunPtr (CString -> Ptr a -> IO CInt))
 
--- |CUDA extensible exception
+-- |LibLTDL extensible exception.
 newtype DLException = DLException String
   deriving (Show, Typeable)
 
@@ -103,7 +103,7 @@ dlError = c_lt_dlerror >>= peekCString >>= throwIO . DLException
 dlInit :: IO ()
 dlInit = c_lt_dlinit >>= checkDLResult
 
--- |Shut down libltdl and close all modules.This function will only then shut
+-- |Shut down libltdl and close all modules. This function will only then shut
 -- down libltdl when it was called as many times as @dlInit@ has been
 -- successfully called.
 dlExit :: IO ()
@@ -114,7 +114,7 @@ dlOpen :: Maybe String -> IO DLHandle
 dlOpen = checkDLOpenResult c_lt_dlopen
 
 -- |Open the module with the specified file name and return a handle to it. This
--- variant trid appending various extensions to teh file name in an effort to
+-- variant tries appending various extensions to the file name in an effort to
 -- find the module.
 dlOpenExt :: Maybe String -> IO DLHandle
 dlOpenExt = checkDLOpenResult c_lt_dlopenext
