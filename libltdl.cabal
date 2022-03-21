@@ -4,16 +4,17 @@ cabal-version:  >= 1.8
 license:        BSD3
 license-file:   LICENSE
 copyright:      (c) 2011 Harvard University
-                (c) 2016-2019 Drexel University
+                (c) 2016-2022 Drexel University
 author:         Geoffrey Mainland <mainland@drexel.edu>
-maintainer:     mainland@eecs.harvard.edu
+maintainer:     Geoffrey Mainland <mainland@drexel.edu>
 stability:      alpha
 homepage:       https://github.com/mainland/libltdl
 category:       Foreign
 synopsis:       FFI interface to libltdl
 description:    This package provides an interface to GNU libtldl.
-tested-with:    GHC==7.4.2, GHC==7.6.3, GHC==7.8.3, GHC==7.10.3, GHC==8.0.2,
-                GHC==8.2.2, GHC==8.4.3, GHC==8.6.5, GHC==8.8.1
+tested-with:    GHC==7.4.2, GHC==7.6.3, GHC==7.8.4, GHC==7.10.3, GHC==8.0.2,
+                GHC==8.2.2, GHC==8.4.3, GHC==8.6.5, GHC==8.8.1, GHC==8.10.7,
+                GHC==9.0.2, GHC==9.2.2
 
 build-type:     Configure
 
