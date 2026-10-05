@@ -25,7 +25,6 @@
 -- OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 -- SUCH DAMAGE.
 
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 
 module Foreign.LibLTDL (
@@ -50,8 +49,7 @@ module Foreign.LibLTDL (
 
 import Control.Exception
 import Control.Monad (unless)
-import Data.List (foldl')
-import Data.Typeable
+import qualified Data.List as List (foldl')
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
@@ -64,7 +62,7 @@ foreign import ccall "wrapper"
 
 -- |LibLTDL extensible exception.
 newtype DLException = DLException String
-  deriving (Show, Typeable)
+  deriving (Show)
 
 instance Exception DLException
 
@@ -74,14 +72,14 @@ withNULLCString (Just s) f = withCString s f
 
 withCSearchPath :: SearchPath -> (CString -> IO a) -> IO a
 withCSearchPath path f =
-    withCString (foldl' (\x y -> x ++ lT_PATHSEP_CHAR : y) [] path) f
+    withCString (List.foldl' (\x y -> x ++ lT_PATHSEP_CHAR : y) [] path) f
 
 withNULLCSearchPath :: Maybe SearchPath -> (CString -> IO a) -> IO a
 withNULLCSearchPath Nothing f =
     f nullPtr
 
 withNULLCSearchPath (Just path) f =
-    withCString (foldl' (\x y -> x ++ lT_PATHSEP_CHAR : y) [] path) f
+    withCString (List.foldl' (\x y -> x ++ lT_PATHSEP_CHAR : y) [] path) f
 
 checkDLResult :: CInt -> IO ()
 checkDLResult i
