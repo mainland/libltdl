@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Catch exceptions from `dlForEachFile` callbacks and rethrow them after
+  returning from C. Run each callback in the masking state of the thread that
+  called `dlForEachFile`. Free callback pointers on all exits, including thread
+  cancellation and exceptions in lazy callback results.
 - Add `withDL` to initialize libltdl, open a module, and release resources when
   the callback returns or raises an exception. It closes ordinary handles and
   leaves resident handles open, because they cannot be closed. Use the wrapper

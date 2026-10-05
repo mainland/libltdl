@@ -2,18 +2,25 @@
 
 module Main (main) where
 
-import           Control.Concurrent       (forkIO, killThread, newEmptyMVar,
-                                           putMVar, takeMVar, tryPutMVar)
+import           Control.Concurrent       (forkIO, killThread, myThreadId,
+                                           newEmptyMVar, putMVar, takeMVar,
+                                           tryPutMVar, yield)
 import           Control.Exception        (AsyncException (ThreadKilled),
-                                           IOException, SomeException, bracket,
-                                           bracket_, fromException, throwIO,
-                                           try)
+                                           IOException, MaskingState (..),
+                                           SomeException, bracket, bracket_,
+                                           fromException, getMaskingState,
+                                           mask_, throwIO, try,
+                                           uninterruptibleMask_)
 import           Control.Monad            (when)
 import           Foreign.C.String         (CString, withCString)
 import           Foreign.C.Types          (CInt (..))
 import           Foreign.LibLTDL
 import           Foreign.LibLTDL.Internal (c_lt_dlexit)
 import           Foreign.Ptr              (FunPtr, Ptr, nullFunPtr, nullPtr)
+import           GHC.Conc                 (ThreadStatus (..), threadStatus)
+import           System.Directory        (createDirectory, getTemporaryDirectory,
+                                           removeDirectoryRecursive, removeFile)
+import           System.IO               (hClose, openTempFile)
 import           System.Info              (os)
 import           System.IO.Error          (ioeGetErrorString, isUserError)
 import           Test.Tasty               (TestTree, defaultMain, localOption,
@@ -56,6 +63,7 @@ main = defaultMain $ localOption (NumThreads 1) $ testGroup "libltdl"
             Right handle -> do
                 dlClose handle
                 assertFailure "Opened a nonexistent module"
+    , callbackTests
     , testGroup "withDL" $
         [ testCase "resident module scope returns its result and shuts down" $ freshLibrary $ do
             resident <- withDL Nothing dlIsResident
@@ -176,3 +184,87 @@ drainLibrary :: IO ()
 drainLibrary = do
     status <- c_lt_dlexit
     when (status == 0) drainLibrary
+
+callbackTests :: TestTree
+callbackTests = testGroup "dlForEachFile"
+    [ testCase "returns the callback result and stops iteration" $
+        withLibrary $ withModules $ \path -> do
+            result <- dlForEachFile (Just [path]) (\_ -> return 7)
+            result @?= 7
+    , testCase "rethrows callback exceptions" $
+        withLibrary $ withModules $ \path -> do
+            result <- try (dlForEachFile (Just [path]) (\_ -> throwIO (userError "callback failed")))
+            assertCallbackException (fmap (const ()) result)
+    , testCase "catches exceptions in a lazy callback result" $
+        withLibrary $ withModules $ \path -> do
+            result <- try (dlForEachFile (Just [path]) (\_ -> return (error "lazy callback result")))
+                :: IO (Either SomeException Int)
+            case result of
+                Left _  -> return ()
+                Right _ -> assertFailure "Callback result was not evaluated"
+    , testCase "runs the callback in the caller's masking state" $
+        withLibrary $ withModules $ \path -> do
+            let observe = do
+                    state <- newEmptyMVar
+                    _ <- dlForEachFile (Just [path]) $ \_ -> do
+                        getMaskingState >>= putMVar state
+                        return 1
+                    takeMVar state
+            observe >>= (@?= Unmasked)
+            mask_ observe >>= (@?= MaskedInterruptible)
+            uninterruptibleMask_ observe >>= (@?= MaskedUninterruptible)
+    , testCase "rethrows an exception that the callback leaves pending" $
+        withLibrary $ withModules $ \path -> do
+            -- Under mask_ the callback function runs masked, so the exception
+            -- stays pending until the function has returned.
+            result <- try $ mask_ $ dlForEachFile (Just [path]) $ \_ -> do
+                callbackThread <- myThreadId
+                thrower <- forkIO (killThread callbackThread)
+                let wait = do
+                        status <- threadStatus thrower
+                        when (status == ThreadRunning) (yield >> wait)
+                wait
+                return 0
+            case result of
+                Left e | Just ThreadKilled <- fromException e -> return ()
+                Left e -> assertFailure ("Unexpected exception: " ++ show e)
+                Right n -> assertFailure ("Returned " ++ show (n :: Int))
+    , testCase "rethrows thread cancellation outside the native callback" $
+        withLibrary $ withModules $ \path -> do
+            started <- newEmptyMVar
+            blocked <- newEmptyMVar
+            finished <- newEmptyMVar
+            _ <- forkIO $ do
+                result <- try $ dlForEachFile (Just [path]) $ \_ -> do
+                    myThreadId >>= putMVar started
+                    takeMVar blocked
+                putMVar finished (result :: Either SomeException Int)
+                -- A safe foreign call may run its callback on a new thread.
+                -- Signal the caller if enumeration fails before the callback.
+                caller <- myThreadId
+                _ <- tryPutMVar started caller
+                return ()
+            callbackThread <- takeMVar started
+            killThread callbackThread
+            result <- takeMVar finished
+            case result of
+                Left exception -> case fromException exception of
+                    Just ThreadKilled -> return ()
+                    _ -> assertFailure ("Unexpected exception: " ++ show exception)
+                Right _ -> assertFailure "Callback returned before cancellation"
+            -- The iterator remains usable after cancellation.
+            dlForEachFile (Just [path]) (\_ -> return 0) >>= (@?= 0)
+    ]
+
+-- Enumeration needs module names, not loadable shared objects.
+withModules :: (FilePath -> IO a) -> IO a
+withModules = bracket create removeDirectoryRecursive
+  where
+    create = do
+        temporary <- getTemporaryDirectory
+        (path, handle) <- openTempFile temporary "libltdl-callback"
+        hClose handle
+        removeFile path
+        createDirectory path
+        writeFile (path ++ "/sample.so") ""
+        return path

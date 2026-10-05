@@ -76,6 +76,7 @@ test-suite unit
 
   build-depends:
     base        >= 4.9  && < 5,
+    directory   >= 1.2  && < 1.4,
     libltdl,
     tasty       >= 1.4  && < 1.6,
     tasty-hunit >= 0.10 && < 0.11

@@ -49,6 +49,7 @@ module Foreign.LibLTDL (
 
 import Control.Exception
 import Control.Monad (unless)
+import Data.IORef
 import qualified Data.List as List (foldl')
 import Foreign
 import Foreign.C.String
@@ -213,18 +214,41 @@ dlGetSearchPath = do
 
 -- |Iterate over the directory list in @path@, calling @f@ for each module,
 -- until @f@ returns a non-zero result, or until there are no more modules. The
--- value returned by the last call to @f@ is returned.
+-- value returned by the last call to @f@ is returned. Exceptions that the
+-- callback raises, and asynchronous exceptions that reach its thread while it
+-- runs, stop iteration and are rethrown after the native iterator returns.
+-- They never unwind through the C call. The callback runs in the masking state
+-- of the thread that called 'dlForEachFile'. An exception thrown to that
+-- thread, such as the one that @System.Timeout.timeout@ sends, does not
+-- interrupt iteration. It is raised only after the native iterator returns.
 dlForEachFile :: Maybe SearchPath -> (String -> IO Int) -> IO Int
 dlForEachFile path f =
-    withNULLCSearchPath path $ \cpath -> do
-    callback' <- mkCallback callback
-    result <- c_lt_dlforeachfile cpath callback' nullPtr
-    freeHaskellFunPtr callback'
-    return (fromIntegral result)
-  where
-    callback :: CString -> Ptr a -> IO CInt
-    callback cfilename _ =
-        peekCString cfilename >>= f >>= return . fromIntegral
+    withNULLCSearchPath path $ \cpath -> mask $ \restore -> do
+        failure <- newIORef (Nothing :: Maybe SomeException)
+        let -- GHC runs each callback on a new Haskell thread, which starts
+            -- unmasked whatever the masking state of this thread. Mask the
+            -- whole callback and run only the user function in this thread's
+            -- masking state. The handler also catches an exception that was
+            -- pending while the callback was masked, which is delivered when
+            -- the mask ends. No handler can catch one that arrives after that,
+            -- as the callback returns to C.
+            callback cfilename _ = handle record $ mask_ $ do
+                previous <- readIORef failure
+                case previous of
+                    Just _  -> return 1
+                    Nothing -> restore $ do
+                        filename <- peekCString cfilename
+                        f filename >>= evaluate . fromIntegral
+            -- Keep the first exception and stop the native iteration.
+            record exception = do
+                modifyIORef' failure (maybe (Just exception) Just)
+                return 1
+        bracket (mkCallback callback) freeHaskellFunPtr $ \callback' -> do
+            result <- c_lt_dlforeachfile cpath callback' nullPtr
+            exception <- readIORef failure
+            case exception of
+                Just e  -> throwIO e
+                Nothing -> return (fromIntegral result)
 
 -- |Mark a module so that it cannot be closed.
 dlMakeResident :: DLHandle -> IO ()
