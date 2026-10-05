@@ -155,11 +155,12 @@ data Advice = Ext
 
 withAdvice :: [Advice] -> (Ptr DLAdvise -> IO a) -> IO a
 withAdvice flags f =
-    alloca $ \advPtr -> do
-    c_lt_dladvise_init advPtr >>= checkDLResult
-    c_lt_dladvise_ext advPtr >>= checkDLResult
-    (mapM_ (setFlag advPtr) flags >> f advPtr)
-      `finally` (c_lt_dladvise_destroy advPtr >>= checkDLResult)
+    alloca $ \advPtr ->
+      bracket_ (c_lt_dladvise_init advPtr >>= checkDLResult)
+               (c_lt_dladvise_destroy advPtr >>= checkDLResult) $ do
+        c_lt_dladvise_ext advPtr >>= checkDLResult
+        mapM_ (setFlag advPtr) flags
+        f advPtr
   where
     setFlag :: Ptr DLAdvise -> Advice -> IO ()
     setFlag advPtr Ext      = c_lt_dladvise_ext advPtr >>= checkDLResult

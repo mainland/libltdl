@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Destroy advice even when an asynchronous exception arrives immediately after
+  it is initialized. Earlier releases already destroyed it when setting a
+  requested flag or opening the module failed.
 - Catch exceptions from `dlForEachFile` callbacks and rethrow them after
   returning from C. Run each callback in the masking state of the thread that
   called `dlForEachFile`. Free callback pointers on all exits, including thread

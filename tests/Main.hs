@@ -64,6 +64,12 @@ main = defaultMain $ localOption (NumThreads 1) $ testGroup "libltdl"
                 dlClose handle
                 assertFailure "Opened a nonexistent module"
     , callbackTests
+    , testCase "conflicting advice flags raise DLException" $ withLibrary $ do
+        result <- try (dlOpenAdvise [Global, Local] Nothing)
+            :: IO (Either DLException DLHandle)
+        case result of
+            Left _  -> return ()
+            Right _ -> assertFailure "Accepted conflicting visibility advice"
     , testGroup "withDL" $
         [ testCase "resident module scope returns its result and shuts down" $ freshLibrary $ do
             resident <- withDL Nothing dlIsResident
