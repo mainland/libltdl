@@ -27,6 +27,46 @@
 
 {-# LANGUAGE ForeignFunctionInterface #-}
 
+-- | Bindings to GNU libltdl.
+--
+-- Calls to libltdl must be serialized across the process. All callers,
+-- including native code and other bindings, must use the same synchronization
+-- protocol. Different handles still share initialization, search paths, and
+-- error state. These bindings do not acquire a lock.
+--
+-- Hold the lock until the entire Haskell operation returns or raises an
+-- exception, including copying any error message. Protecting individual
+-- foreign calls is insufficient for operations that make several calls.
+-- Serializing an entire 'withDL' action also protects the handle's lifetime.
+-- Complete any worker actions that use its handle or symbols before returning.
+-- Exception masking and resource cleanup do not provide mutual exclusion.
+--
+-- A 'dlForEachFile' callback runs before the native iterator returns and may
+-- run on a different Haskell thread. Do not reacquire a non-reentrant loader
+-- lock in the callback or wait for another thread that needs it. Collect file
+-- names in the callback and perform loader operations after iteration.
+--
+-- Native functions obtained through 'dlSym' have their own threading contracts.
+-- See the
+-- <https://www.gnu.org/software/libtool/manual/html_node/Thread-Safety-in-libltdl.html GNU libltdl threading documentation>.
+--
+-- == Using a shared loader lock
+--
+-- In this example, the program creates one @MVar@ for all loader callers.
+--
+-- > import Control.Concurrent.MVar
+-- > import Foreign.LibLTDL
+-- >
+-- > withLockedDL :: MVar () -> Maybe String -> (DLHandle -> IO a) -> IO a
+-- > withLockedDL loaderLock filename action =
+-- >     withMVar loaderLock $ \() -> withDL filename action
+-- >
+-- > main :: IO ()
+-- > main = do
+-- >     loaderLock <- newMVar ()
+-- >     withLockedDL loaderLock Nothing $ \handle -> do
+-- >         resident <- dlIsResident handle
+-- >         print resident
 module Foreign.LibLTDL (
     Advice(..),
     DLException(..),
@@ -47,14 +87,14 @@ module Foreign.LibLTDL (
     dlIsResident
   ) where
 
-import Control.Exception
-import Control.Monad (unless)
-import Data.IORef
-import qualified Data.List as List (foldl')
-import Foreign
-import Foreign.C.String
-import Foreign.C.Types
-import Foreign.LibLTDL.Internal
+import           Control.Exception
+import           Control.Monad            (unless)
+import           Data.IORef
+import qualified Data.List                as List (foldl')
+import           Foreign
+import           Foreign.C.String
+import           Foreign.C.Types
+import           Foreign.LibLTDL.Internal
 
 type SearchPath = [FilePath]
 
@@ -128,7 +168,8 @@ dlOpen = checkDLOpenResult c_lt_dlopen
 -- modules, even at the final 'dlExit' call.
 --
 -- The action must not close the handle. Use the handle and any pointers
--- obtained with 'dlSym' only within the action.
+-- obtained with 'dlSym' only within the action. Apply the process-wide
+-- synchronization contract above to the entire action.
 --
 -- @since 0.2.0
 withDL :: Maybe String -> (DLHandle -> IO a) -> IO a
@@ -223,6 +264,9 @@ dlGetSearchPath = do
 -- of the thread that called 'dlForEachFile'. An exception thrown to that
 -- thread, such as the one that @System.Timeout.timeout@ sends, does not
 -- interrupt iteration. It is raised only after the native iterator returns.
+-- Hold the process-wide loader lock throughout iteration, including callbacks.
+-- See the module's threading contract before acquiring locks or waiting for
+-- worker threads.
 dlForEachFile :: Maybe SearchPath -> (String -> IO Int) -> IO Int
 dlForEachFile path f =
     withNULLCSearchPath path $ \cpath -> mask $ \restore -> do

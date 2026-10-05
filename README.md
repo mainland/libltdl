@@ -32,4 +32,5 @@ The package supports GHC 8.0 and later. CI tests the versions listed in
 `libltdl.cabal`.
 
 See the [API documentation](https://hackage.haskell.org/package/libltdl/docs/Foreign-LibLTDL.html)
-for module handles and loading operations.
+for an example of loading with a shared lock, the synchronization requirements,
+and the lifetime of module handles and symbols.
