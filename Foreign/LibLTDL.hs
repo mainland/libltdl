@@ -36,6 +36,7 @@ module Foreign.LibLTDL (
     dlInit,
     dlExit,
     dlOpen,
+    withDL,
     dlOpenExt,
     dlOpenAdvise,
     dlClose,
@@ -48,7 +49,7 @@ module Foreign.LibLTDL (
   ) where
 
 import Control.Exception
-import Control.Monad (liftM)
+import Control.Monad (unless)
 import Data.List (foldl')
 import Data.Typeable
 import Foreign
@@ -117,6 +118,28 @@ dlExit = c_lt_dlexit >>= checkDLResult
 -- with 'dlClose'.
 dlOpen :: Maybe String -> IO DLHandle
 dlOpen = checkDLOpenResult c_lt_dlopen
+
+-- |Initialize libltdl, open a module with 'dlOpen', and run an action with its
+-- handle. Close the handle and balance initialization with 'dlExit' when the
+-- action returns or raises an exception. If opening fails, initialization is
+-- still balanced.
+--
+-- Resident handles, including the main program opened by 'Nothing', cannot be
+-- closed with 'dlClose', so they are left open. libltdl never unloads resident
+-- modules, even at the final 'dlExit' call.
+--
+-- The action must not close the handle. Use the handle and any pointers
+-- obtained with 'dlSym' only within the action.
+--
+-- @since 0.2.0
+withDL :: Maybe String -> (DLHandle -> IO a) -> IO a
+withDL name action =
+    bracket_ dlInit dlExit $
+      bracket (dlOpen name) close action
+  where
+    close h = do
+        resident <- dlIsResident h
+        unless resident (dlClose h)
 
 -- |Open the module with the specified file name and return a handle to it. This
 -- variant tries appending various extensions to the file name in an effort to
