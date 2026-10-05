@@ -84,7 +84,7 @@ withNULLCSearchPath (Just path) f =
 
 checkDLResult :: CInt -> IO ()
 checkDLResult i
-    | i < 0     = dlError
+    | i /= 0    = dlError
     | otherwise = return ()
 
 checkDLOpenResult :: (CString -> IO DLHandle) -> Maybe String -> IO DLHandle
@@ -99,17 +99,22 @@ dlError :: IO a
 dlError = c_lt_dlerror >>= peekCString >>= throwIO . DLException
 
 -- |Initialize libltdl. This function must be called before using libltdl and
--- may be called several times.
+-- may be called several times. Balance each successful call with 'dlExit'.
 dlInit :: IO ()
 dlInit = c_lt_dlinit >>= checkDLResult
 
--- |Shut down libltdl and close all modules. This function will only then shut
--- down libltdl when it was called as many times as @dlInit@ has been
--- successfully called.
+-- |Shut down libltdl. The 'dlExit' call that balances the last successful
+-- 'dlInit' call unloads every module that is not resident. Resident modules,
+-- including the main program, stay loaded for the life of the process. Do not
+-- use handles or symbol pointers after that final call, even those for
+-- resident modules. Calling 'dlExit' more times than 'dlInit' raises
+-- t'DLException'.
 dlExit :: IO ()
-dlExit = c_lt_dlinit >>= checkDLResult
+dlExit = c_lt_dlexit >>= checkDLResult
 
 -- |Open the module with the specified file name and return a handle for it.
+-- 'Nothing' opens the main program, whose resident handle cannot be closed
+-- with 'dlClose'.
 dlOpen :: Maybe String -> IO DLHandle
 dlOpen = checkDLOpenResult c_lt_dlopen
 
@@ -149,6 +154,7 @@ dlOpenAdvise flags name =
 
 -- |Decrement the reference count on the module @h@. If it drops to zero and no
 -- other module depends on this module, then the module is unloaded.
+-- Closing a resident module raises t'DLException'.
 dlClose :: DLHandle -> IO ()
 dlClose h =
     c_lt_dlclose h >>= checkDLResult
