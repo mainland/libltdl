@@ -158,7 +158,6 @@ withAdvice flags f =
     alloca $ \advPtr ->
       bracket_ (c_lt_dladvise_init advPtr >>= checkDLResult)
                (c_lt_dladvise_destroy advPtr >>= checkDLResult) $ do
-        c_lt_dladvise_ext advPtr >>= checkDLResult
         mapM_ (setFlag advPtr) flags
         f advPtr
   where
@@ -169,6 +168,8 @@ withAdvice flags f =
     setFlag advPtr Resident = c_lt_dladvise_resident advPtr >>= checkDLResult
     setFlag advPtr Preload  = c_lt_dladvise_preload advPtr >>= checkDLResult
 
+-- |Open a module with the requested advice flags. Extensions are appended
+-- only when 'Ext' is present. An empty flag list uses the exact file name.
 dlOpenAdvise :: [Advice] -> Maybe String -> IO DLHandle
 dlOpenAdvise flags name =
     withAdvice flags $ \advPtr -> do

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Append module-name extensions in `dlOpenAdvise` only when `Ext` is requested.
 - Destroy advice even when an asynchronous exception arrives immediately after
   it is initialized. Earlier releases already destroyed it when setting a
   requested flag or opening the module failed.

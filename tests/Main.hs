@@ -97,7 +97,17 @@ ordinaryModuleTests :: [TestTree]
 ordinaryModuleTests
     | os /= "linux" = []
     | otherwise     =
-        [ testCase "ordinary module is closed after returning" $ withLibrary $ do
+        [ testCase "advice extension search is opt-in" $ withLibrary $ do
+            result <- try (dlOpenAdvise [] (Just "libltdl"))
+                :: IO (Either DLException DLHandle)
+            case result of
+                Left _ -> return ()
+                Right handle -> do
+                    dlClose handle
+                    assertFailure "Appended an extension without Ext advice"
+            bracket (dlOpenAdvise [Ext] (Just "libltdl")) dlClose $ \handle ->
+                dlIsResident handle >>= (@?= False)
+        , testCase "ordinary module is closed after returning" $ withLibrary $ do
             before <- loadedModules
             result <- withDL (Just "libltdl.so") $ \handle -> do
                 dlIsResident handle >>= (@?= False)
