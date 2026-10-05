@@ -9,9 +9,10 @@ author:         Geoffrey Mainland <mainland@drexel.edu>
 maintainer:     Geoffrey Mainland <mainland@drexel.edu>
 stability:      alpha
 homepage:       https://github.com/mainland/libltdl
+bug-reports:    https://github.com/mainland/libltdl/issues
 category:       Foreign
 synopsis:       FFI interface to libltdl
-description:    This package provides an interface to GNU libtldl.
+description:    This package provides an interface to GNU libltdl.
 tested-with:    GHC==8.0.2,
                 GHC==8.2.2,
                 GHC==8.4.4,
@@ -28,6 +29,10 @@ tested-with:    GHC==8.0.2,
                 GHC==9.14.1
 
 build-type:     Simple
+
+extra-source-files:
+  README.md
+  CHANGELOG.md
 
 flag examples
   description: Build example programs.
@@ -54,8 +59,8 @@ executable sin
     base >= 4.9 && < 5,
     libltdl
 
-  main-is: 	   Main.hs
-  hs-source-dirs:  examples/sin
+  main-is: Main.hs
+  hs-source-dirs: examples/sin
 
   if flag(examples)
     buildable: True
@@ -77,4 +82,4 @@ test-suite unit
 
 source-repository head
   type:     git
-  location: git://github.com/mainland/libltdl.git
+  location: https://github.com/mainland/libltdl.git
