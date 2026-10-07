@@ -4,7 +4,7 @@ cabal-version:  >= 1.10
 license:        BSD3
 license-file:   LICENSE
 copyright:      (c) 2011 Harvard University
-                (c) 2016-2022 Drexel University
+                (c) 2016-2026 Drexel University
 author:         Geoffrey Mainland <mainland@drexel.edu>
 maintainer:     Geoffrey Mainland <mainland@drexel.edu>
 stability:      alpha
