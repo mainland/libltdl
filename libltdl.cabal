@@ -27,11 +27,7 @@ tested-with:    GHC==8.0.2,
                 GHC==9.12.4,
                 GHC==9.14.1
 
-build-type:     Configure
-
-extra-source-files:
-  configure
-  libltdl.buildinfo.in
+build-type:     Simple
 
 flag examples
   description: Build example programs.
@@ -47,6 +43,9 @@ library
 
   build-depends:
     base >= 4.9 && < 5
+
+  includes:        ltdl.h
+  extra-libraries: ltdl
 
 executable sin
   default-language: Haskell2010
