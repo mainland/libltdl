@@ -98,6 +98,7 @@ import           Foreign.C.String
 import           Foreign.C.Types
 import           Foreign.LibLTDL.Internal
 
+-- |A module search path, as a list of directories.
 type SearchPath = [FilePath]
 
 foreign import ccall "wrapper"
@@ -189,11 +190,15 @@ withDL name action =
 dlOpenExt :: Maybe String -> IO DLHandle
 dlOpenExt = checkDLOpenResult c_lt_dlopenext
 
-data Advice = Ext
-            | Global
-            | Local
-            | Resident
-            | Preload
+-- |Advice for opening a module with 'dlOpenAdvise'.
+data Advice = Ext       -- ^ Try appending libtool and native shared library
+                        -- extensions to the file name.
+            | Global    -- ^ Make the module's symbols available to modules
+                        -- loaded later.
+            | Local     -- ^ Keep the module's symbols out of the global
+                        -- namespace.
+            | Resident  -- ^ Make the module resident, so it is never unloaded.
+            | Preload   -- ^ Search only preloaded modules.
   deriving (Eq, Ord, Enum, Show)
 
 withAdvice :: [Advice] -> (Ptr DLAdvise -> IO a) -> IO a

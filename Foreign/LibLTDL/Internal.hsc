@@ -44,15 +44,17 @@ import Foreign.C.Types
 lT_PATHSEP_CHAR :: Char
 lT_PATHSEP_CHAR = #{const_char LT_PATHSEP_CHAR}
 
--- |Module handle
+-- |The opaque C structure behind a module handle.
 data OpaqueDLHandle = OpaqueDLHandle
 
+-- |Module handle
 newtype DLHandle = DLHandle { unDLHandle :: Ptr OpaqueDLHandle }
   deriving (Eq, Ord, Show)
 
--- |Optional module loading modes
+-- |The opaque C structure behind a set of loading modes.
 data OpaqueDLAdvise = OpaqueDLAdvise
 
+-- |Optional module loading modes
 newtype DLAdvise = DLAdvise { unDLAdvise :: Ptr OpaqueDLAdvise }
   deriving (Eq, Ord, Show, Storable)
 
