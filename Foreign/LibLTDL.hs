@@ -92,7 +92,7 @@ module Foreign.LibLTDL (
 import           Control.Exception
 import           Control.Monad            (unless)
 import           Data.IORef
-import qualified Data.List                as List (foldl')
+import qualified Data.List                as List (intercalate)
 import           Foreign
 import           Foreign.C.String
 import           Foreign.C.Types
@@ -115,14 +115,14 @@ withNULLCString (Just s) f = withCString s f
 
 withCSearchPath :: SearchPath -> (CString -> IO a) -> IO a
 withCSearchPath path f =
-    withCString (List.foldl' (\x y -> x ++ lT_PATHSEP_CHAR : y) [] path) f
+    withCString (List.intercalate [lT_PATHSEP_CHAR] path) f
 
 withNULLCSearchPath :: Maybe SearchPath -> (CString -> IO a) -> IO a
 withNULLCSearchPath Nothing f =
     f nullPtr
 
 withNULLCSearchPath (Just path) f =
-    withCString (List.foldl' (\x y -> x ++ lT_PATHSEP_CHAR : y) [] path) f
+    withCSearchPath path f
 
 checkDLResult :: CInt -> IO ()
 checkDLResult i
