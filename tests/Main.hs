@@ -30,7 +30,7 @@ import           Test.Tasty.HUnit         (assertBool, assertFailure, testCase,
 import           Test.Tasty.Runners       (NumThreads (..))
 
 main :: IO ()
-main = defaultMain $ localOption (NumThreads 1) $ testGroup "libltdl"
+main = defaultMain $ localOption (NumThreads 1) $ testGroup "libltdl" $
     [ testCase "shutdown balances initialization" $ freshLibrary $ do
         dlInit
         dlExit
@@ -93,7 +93,7 @@ main = defaultMain $ localOption (NumThreads 1) $ testGroup "libltdl"
             assertCallbackException result
             assertStopped
         ] ++ ordinaryModuleTests
-    ]
+    ] ++ missingMessageTests
 
 -- The Linux tests use the libltdl module whose development files are required
 -- to build this package. Keep another initialization active so shutdown cannot
@@ -152,6 +152,24 @@ ordinaryModuleTests
                     _ -> assertFailure ("Unexpected exception: " ++ show exception)
                 Right () -> assertFailure "Callback returned before cancellation"
             loadedModules >>= (@?= before)
+        ]
+
+-- The test suite links a C symbol whose address is zero and exports it from
+-- the executable. dlsym returns NULL for it without setting an error, so
+-- lt_dlerror has no message.
+missingMessageTests :: [TestTree]
+missingMessageTests
+    | os /= "linux" = []
+    | otherwise     =
+        [ testCase "failure without a native error message raises DLException" $
+            withLibrary $ do
+                handle <- dlOpen Nothing
+                result <- try (dlSym handle "libltdl_test_null_symbol")
+                    :: IO (Either DLException (FunPtr ()))
+                case result of
+                    Left (DLException message) ->
+                        message @?= "libltdl failed without an error message"
+                    Right _ -> assertFailure "Returned a null symbol address"
         ]
 
 -- Every function that opens a module must reject the name before calling

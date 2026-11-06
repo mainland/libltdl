@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Raise `DLException` with a fixed message when libltdl fails without an error
+  message, as `dlSym` does for a symbol whose address is zero. Previously, the
+  bindings dereferenced a null pointer.
 - Raise `DLException` for a file name that is empty or contains NUL in
   `dlOpen`, `dlOpenExt`, `dlOpenAdvise`, and `withDL`. Previously, `dlOpen`
   aborted the process on a libltdl assertion for an empty name or one beginning

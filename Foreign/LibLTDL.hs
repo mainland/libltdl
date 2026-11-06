@@ -146,8 +146,15 @@ checkDLOpenResult dlopen = do
       then dlError
       else return h
 
+-- libltdl can fail without an error message. For example, lt_dlsym returns
+-- NULL and leaves no message for a symbol whose address is zero.
 dlError :: IO a
-dlError = c_lt_dlerror >>= peekCString >>= throwIO . DLException
+dlError = do
+    cmessage <- c_lt_dlerror
+    message <- if cmessage == nullPtr
+               then return "libltdl failed without an error message"
+               else peekCString cmessage
+    throwIO (DLException message)
 
 -- |Initialize libltdl. This function must be called before using libltdl and
 -- may be called several times. Balance each successful call with 'dlExit'.

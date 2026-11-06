@@ -81,6 +81,11 @@ test-suite unit
     tasty       >= 1.4  && < 1.6,
     tasty-hunit >= 0.10 && < 0.11
 
+  -- Export a zero-address symbol for the missing error message test.
+  if os(linux)
+    c-sources:  tests/cbits/null-symbol.c
+    ld-options: -rdynamic
+
 source-repository head
   type:     git
   location: https://github.com/mainland/libltdl.git
