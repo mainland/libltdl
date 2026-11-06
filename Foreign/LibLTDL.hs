@@ -283,13 +283,22 @@ dlGetSearchPath = do
 
 -- |Iterate over the directory list in @path@, calling @f@ for each module,
 -- until @f@ returns a non-zero result, or until there are no more modules. The
--- value returned by the last call to @f@ is returned. Exceptions that the
--- callback raises, and asynchronous exceptions that reach its thread while it
--- runs, stop iteration and are rethrown after the native iterator returns.
--- They never unwind through the C call. The callback runs in the masking state
--- of the thread that called 'dlForEachFile'. An exception thrown to that
--- thread, such as the one that @System.Timeout.timeout@ sends, does not
--- interrupt iteration. It is raised only after the native iterator returns.
+-- value returned by the last call to @f@ is returned, or 0 if @f@ is never
+-- called.
+--
+-- @'Just' dirs@ searches only @dirs@. 'Nothing' searches the user-defined
+-- search path, the directories in the @LTDL_LIBRARY_PATH@ environment variable
+-- and in the system's library path variable, such as @LD_LIBRARY_PATH@, and
+-- then the system's default library directories.
+--
+-- Exceptions that the callback raises, and asynchronous exceptions that reach
+-- its thread while it runs, stop iteration and are rethrown after the native
+-- iterator returns. They never unwind through the C call. The callback runs in
+-- the masking state of the thread that called 'dlForEachFile'. An exception
+-- thrown to that thread, such as the one that @System.Timeout.timeout@ sends,
+-- does not interrupt iteration. It is raised only after the native iterator
+-- returns.
+--
 -- Hold the process-wide loader lock throughout iteration, including callbacks.
 -- See the module's threading contract before acquiring locks or waiting for
 -- worker threads.

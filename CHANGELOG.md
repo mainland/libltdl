@@ -12,6 +12,7 @@
 - Document the required process-wide synchronization contract, scoped handle
   lifetime, and callback locking constraints. Include a caller-owned lock
   example. The bindings do not acquire a lock.
+- Document the directories that `dlForEachFile Nothing` searches.
 - Append module-name extensions in `dlOpenAdvise` only when `Ext` is requested.
 - Destroy advice even when an asynchronous exception arrives immediately after
   it is initialized. Earlier releases already destroyed it when setting a

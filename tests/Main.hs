@@ -12,6 +12,8 @@ import           Control.Exception        (AsyncException (ThreadKilled),
                                            mask_, throwIO, try,
                                            uninterruptibleMask_)
 import           Control.Monad            (when)
+import           Data.IORef               (newIORef, readIORef, writeIORef)
+import           Data.List                (isPrefixOf)
 import           Foreign.C.String         (CString, withCString)
 import           Foreign.C.Types          (CInt (..))
 import           Foreign.LibLTDL
@@ -255,6 +257,21 @@ callbackTests = testGroup "dlForEachFile"
         withLibrary $ withModules $ \path -> do
             result <- dlForEachFile (Just [path]) (\_ -> return 7)
             result @?= 7
+    , testCase "searches no directories for an empty list" $ withLibrary $ do
+        result <- dlForEachFile (Just []) $ \_ ->
+            assertFailure "Called back for an empty directory list" >> return 1
+        result @?= 0
+    , testCase "searches the user-defined search path by default" $
+        withLibrary $ withModules $ \path -> do
+            dlSetSearchPath [path]
+            found <- newIORef Nothing
+            result <- dlForEachFile Nothing $ \filename -> do
+                writeIORef found (Just filename)
+                return 1
+            result @?= 1
+            readIORef found >>= \filename ->
+                assertBool ("Called back for " ++ show filename ++ " first")
+                    (maybe False ((path ++ "/") `isPrefixOf`) filename)
     , testCase "rethrows callback exceptions" $
         withLibrary $ withModules $ \path -> do
             result <- try (dlForEachFile (Just [path]) (\_ -> throwIO (userError "callback failed")))
