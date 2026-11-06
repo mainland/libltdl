@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Raise `DLException` in `dlSetSearchPath` and `dlForEachFile` for a directory
+  whose name contains the path separator or NUL. Previously, libltdl split it
+  at the separator into several directories, and a NUL silently truncated the
+  search path.
 - Raise `DLException` with a fixed message when libltdl fails without an error
   message, as `dlSym` does for a symbol whose address is zero. Previously, the
   bindings dereferenced a null pointer.

@@ -17,7 +17,7 @@ import           Data.List                (isPrefixOf)
 import           Foreign.C.String         (CString, withCString)
 import           Foreign.C.Types          (CInt (..))
 import           Foreign.LibLTDL
-import           Foreign.LibLTDL.Internal (c_lt_dlexit)
+import           Foreign.LibLTDL.Internal (c_lt_dlexit, lT_PATHSEP_CHAR)
 import           Foreign.Ptr              (FunPtr, Ptr, nullFunPtr, nullPtr)
 import           GHC.Conc                 (ThreadStatus (..), threadStatus)
 import           System.Directory        (createDirectory, getTemporaryDirectory,
@@ -50,6 +50,8 @@ main = defaultMain $ localOption (NumThreads 1) $ testGroup "libltdl" $
     , testCase "empty search path" $ withLibrary $ do
         dlSetSearchPath []
         dlGetSearchPath >>= (@?= [])
+    , invalidDirectoryTest "the separator" lT_PATHSEP_CHAR
+    , invalidDirectoryTest "NUL" '\NUL'
     , testCase "main program is resident and cannot be closed" $ withLibrary $ do
         handle <- dlOpen Nothing
         dlIsResident handle >>= (@?= True)
@@ -173,6 +175,20 @@ missingMessageTests
                         message @?= "libltdl failed without an error message"
                     Right _ -> assertFailure "Returned a null symbol address"
         ]
+
+-- A native search path cannot represent a directory containing the character.
+invalidDirectoryTest :: String -> Char -> TestTree
+invalidDirectoryTest description c =
+    testCase ("search path directory containing " ++ description ++
+              " raises DLException") $ withLibrary $ do
+        let paths = ["/libltdl-test/one"]
+            dir   = "/libltdl-test/two" ++ c : "/libltdl-test/three"
+        dlSetSearchPath paths
+        assertDLException ("Accepted a directory containing " ++ description) $
+            dlSetSearchPath [dir]
+        dlGetSearchPath >>= (@?= paths)
+        assertDLException ("Searched a directory containing " ++ description) $
+            dlForEachFile (Just [dir]) (\_ -> return 1)
 
 -- Every function that opens a module must reject the name before calling
 -- libltdl.

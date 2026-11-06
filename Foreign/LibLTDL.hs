@@ -114,9 +114,17 @@ withNULLCString :: Maybe String -> (CString -> IO a) -> IO a
 withNULLCString Nothing f  = f nullPtr
 withNULLCString (Just s) f = withCString s f
 
+-- libltdl stores a search path as one separator-joined C string, so it cannot
+-- represent a directory whose name contains the separator or NUL.
 withCSearchPath :: SearchPath -> (CString -> IO a) -> IO a
 withCSearchPath path f =
-    withCString (List.intercalate [lT_PATHSEP_CHAR] path) f
+    case [(dir, c) | dir <- path, c <- reserved, c `elem` dir] of
+      (dir, c) : _ -> throwIO $ DLException $
+                      "search path directory contains " ++ show c ++ ": " ++
+                      show dir
+      []           -> withCString (List.intercalate [lT_PATHSEP_CHAR] path) f
+  where
+    reserved = [lT_PATHSEP_CHAR, '\NUL']
 
 withNULLCSearchPath :: Maybe SearchPath -> (CString -> IO a) -> IO a
 withNULLCSearchPath Nothing f =
@@ -259,8 +267,12 @@ dlSym h name =
           then dlError
           else return fptr
 
--- |Replace the current user-defined library search path with @path@, which
--- must be a list of absolute directories separated by @lT_PATHSEP_CHAR@.
+-- |Replace the current user-defined library search path with the directories
+-- in @path@, which must be absolute. An empty list clears the search path.
+-- libltdl stores the search path as one string separated by the platform's
+-- path separator, @:@ on POSIX systems and @;@ on Windows. A directory whose
+-- name contains the separator or NUL raises t'DLException' and leaves the
+-- search path unchanged.
 dlSetSearchPath :: SearchPath -> IO ()
 dlSetSearchPath path =
     withCSearchPath path $ \cpath ->
@@ -286,7 +298,8 @@ dlGetSearchPath = do
 -- value returned by the last call to @f@ is returned, or 0 if @f@ is never
 -- called.
 --
--- @'Just' dirs@ searches only @dirs@. 'Nothing' searches the user-defined
+-- @'Just' dirs@ searches only @dirs@, which are subject to the same
+-- restrictions as 'dlSetSearchPath'. 'Nothing' searches the user-defined
 -- search path, the directories in the @LTDL_LIBRARY_PATH@ environment variable
 -- and in the system's library path variable, such as @LD_LIBRARY_PATH@, and
 -- then the system's default library directories.
