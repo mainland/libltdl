@@ -59,68 +59,68 @@ newtype DLAdvise = DLAdvise { unDLAdvise :: Ptr OpaqueDLAdvise }
   deriving (Eq, Ord, Show, Storable)
 
 -- Initialization
-foreign import ccall "libltdl.h lt_dlinit"
+foreign import ccall "ltdl.h lt_dlinit"
     c_lt_dlinit :: IO CInt
 
-foreign import ccall "libltdl.h lt_dlexit"
+foreign import ccall "ltdl.h lt_dlexit"
     c_lt_dlexit :: IO CInt
 
-foreign import ccall "libltdl.h lt_dlopen"
+foreign import ccall "ltdl.h lt_dlopen"
     c_lt_dlopen :: CString -> IO DLHandle
 
-foreign import ccall "libltdl.h lt_dlopenext"
+foreign import ccall "ltdl.h lt_dlopenext"
     c_lt_dlopenext :: CString -> IO DLHandle
 
-foreign import ccall "libltdl.h lt_dlopenadvise"
+foreign import ccall "ltdl.h lt_dlopenadvise"
     c_lt_dlopenadvise :: CString -> DLAdvise -> IO DLHandle
 
-foreign import ccall "libltdl.h lt_dladvise_init"
+foreign import ccall "ltdl.h lt_dladvise_init"
     c_lt_dladvise_init :: Ptr DLAdvise -> IO CInt
 
-foreign import ccall "libltdl.h lt_dladvise_destroy"
+foreign import ccall "ltdl.h lt_dladvise_destroy"
     c_lt_dladvise_destroy :: Ptr DLAdvise -> IO CInt
 
-foreign import ccall "libltdl.h lt_dladvise_ext"
+foreign import ccall "ltdl.h lt_dladvise_ext"
     c_lt_dladvise_ext :: Ptr DLAdvise -> IO CInt
 
-foreign import ccall "libltdl.h lt_dladvise_global"
+foreign import ccall "ltdl.h lt_dladvise_global"
     c_lt_dladvise_global :: Ptr DLAdvise -> IO CInt
 
-foreign import ccall "libltdl.h lt_dladvise_local"
+foreign import ccall "ltdl.h lt_dladvise_local"
     c_lt_dladvise_local :: Ptr DLAdvise -> IO CInt
 
-foreign import ccall "libltdl.h lt_dladvise_resident"
+foreign import ccall "ltdl.h lt_dladvise_resident"
     c_lt_dladvise_resident :: Ptr DLAdvise -> IO CInt
 
-foreign import ccall "libltdl.h lt_dladvise_preload"
+foreign import ccall "ltdl.h lt_dladvise_preload"
     c_lt_dladvise_preload :: Ptr DLAdvise -> IO CInt
 
-foreign import ccall "libltdl.h lt_dlclose"
+foreign import ccall "ltdl.h lt_dlclose"
     c_lt_dlclose :: DLHandle -> IO CInt
 
-foreign import ccall "libltdl.h lt_dlsym"
+foreign import ccall "ltdl.h lt_dlsym"
     c_lt_dlsym :: DLHandle -> CString -> IO (FunPtr a)
 
-foreign import ccall "libltdl.h lt_dlerror"
+foreign import ccall "ltdl.h lt_dlerror"
     c_lt_dlerror :: IO CString
 
-foreign import ccall "libltdl.h lt_dladdsearchdir"
+foreign import ccall "ltdl.h lt_dladdsearchdir"
     c_lt_dladdsearchdir :: CString -> IO CInt
 
-foreign import ccall "libltdl.h lt_dlinsertsearchdir"
+foreign import ccall "ltdl.h lt_dlinsertsearchdir"
     c_lt_dlinsertsearchdir :: CString -> CString -> IO CInt
 
-foreign import ccall "libltdl.h lt_dlsetsearchpath"
+foreign import ccall "ltdl.h lt_dlsetsearchpath"
     c_lt_dlsetsearchpath :: CString -> IO CInt
 
-foreign import ccall "libltdl.h lt_dlgetsearchpath"
+foreign import ccall "ltdl.h lt_dlgetsearchpath"
     c_lt_dlgetsearchpath :: IO CString
 
-foreign import ccall "libltdl.h lt_dlforeachfile"
+foreign import ccall "ltdl.h lt_dlforeachfile"
     c_lt_dlforeachfile :: CString -> FunPtr (CString -> Ptr a -> IO CInt) -> Ptr a -> IO CInt
 
-foreign import ccall "libltdl.h lt_dlmakeresident"
+foreign import ccall "ltdl.h lt_dlmakeresident"
     c_lt_dlmakeresident :: DLHandle -> IO CInt
 
-foreign import ccall "libltdl.h lt_dlisresident"
+foreign import ccall "ltdl.h lt_dlisresident"
     c_lt_dlisresident :: DLHandle -> IO CInt
