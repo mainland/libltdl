@@ -63,6 +63,11 @@ main = defaultMain $ localOption (NumThreads 1) $ testGroup "libltdl"
             Right handle -> do
                 dlClose handle
                 assertFailure "Opened a nonexistent module"
+    , invalidModuleNameTests "empty file name" ""
+    -- libltdl sees an empty C string and aborts on an assertion.
+    , invalidModuleNameTests "file name beginning with NUL" "\0bad"
+    -- Truncated at the NUL, this name opens the libltdl module on Linux.
+    , invalidModuleNameTests "file name containing NUL" "libltdl.so\0bad"
     , callbackTests
     , testCase "conflicting advice flags raise DLException" $ withLibrary $ do
         result <- try (dlOpenAdvise [Global, Local] Nothing)
@@ -148,6 +153,31 @@ ordinaryModuleTests
                 Right () -> assertFailure "Callback returned before cancellation"
             loadedModules >>= (@?= before)
         ]
+
+-- Every function that opens a module must reject the name before calling
+-- libltdl.
+invalidModuleNameTests :: String -> String -> TestTree
+invalidModuleNameTests description name =
+    testGroup (description ++ " raises DLException")
+        [ testCase "dlOpen" $ withLibrary $
+            assertDLException failure (dlOpen (Just name))
+        , testCase "dlOpenExt" $ withLibrary $
+            assertDLException failure (dlOpenExt (Just name))
+        , testCase "dlOpenAdvise" $ withLibrary $
+            assertDLException failure (dlOpenAdvise [] (Just name))
+        , testCase "withDL" $ freshLibrary $ do
+            assertDLException failure $ withDL (Just name) (\_ -> return ())
+            assertStopped
+        ]
+  where
+    failure = "Opened " ++ show name
+
+assertDLException :: String -> IO a -> IO ()
+assertDLException failure action = do
+    result <- try action
+    case result of
+        Left (DLException _) -> return ()
+        Right _              -> assertFailure failure
 
 assertCallbackException :: Either IOException () -> IO ()
 assertCallbackException result =

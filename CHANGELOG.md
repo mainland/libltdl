@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Raise `DLException` for a file name that is empty or contains NUL in
+  `dlOpen`, `dlOpenExt`, `dlOpenAdvise`, and `withDL`. Previously, `dlOpen`
+  aborted the process on a libltdl assertion for an empty name or one beginning
+  with NUL, and a NUL elsewhere silently truncated the name.
 - Document the required process-wide synchronization contract, scoped handle
   lifetime, and callback locking constraints. Include a caller-owned lock
   example. The bindings do not acquire a lock.

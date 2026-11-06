@@ -130,10 +130,18 @@ checkDLResult i
     | i /= 0    = dlError
     | otherwise = return ()
 
-checkDLOpenResult :: (CString -> IO DLHandle) -> Maybe String -> IO DLHandle
-checkDLOpenResult dlopen maybe_filename =
-    withNULLCString maybe_filename $ \cfilename -> do
-    h <- dlopen cfilename
+-- libltdl aborts on an assertion when asked to open an empty file name, so
+-- reject one before calling it. A C string ends at its first NUL, so a name
+-- containing NUL would be truncated, and a leading NUL would make it empty.
+withModuleName :: Maybe String -> (CString -> IO a) -> IO a
+withModuleName (Just name) _
+    | null name          = throwIO (DLException "empty file name")
+    | '\NUL' `elem` name = throwIO (DLException "file name contains NUL")
+withModuleName name f    = withNULLCString name f
+
+checkDLOpenResult :: IO DLHandle -> IO DLHandle
+checkDLOpenResult dlopen = do
+    h <- dlopen
     if unDLHandle h == nullPtr
       then dlError
       else return h
@@ -157,9 +165,10 @@ dlExit = c_lt_dlexit >>= checkDLResult
 
 -- |Open the module with the specified file name and return a handle for it.
 -- 'Nothing' opens the main program, whose resident handle cannot be closed
--- with 'dlClose'.
+-- with 'dlClose'. A file name that is empty or contains NUL raises
+-- t'DLException'.
 dlOpen :: Maybe String -> IO DLHandle
-dlOpen = checkDLOpenResult c_lt_dlopen
+dlOpen name = withModuleName name (checkDLOpenResult . c_lt_dlopen)
 
 -- |Initialize libltdl, open a module with 'dlOpen', and run an action with its
 -- handle. Close the handle and balance initialization with 'dlExit' when the
@@ -186,9 +195,10 @@ withDL name action =
 
 -- |Open the module with the specified file name and return a handle to it. This
 -- variant tries appending various extensions to the file name in an effort to
--- find the module.
+-- find the module. A file name that is empty or contains NUL raises
+-- t'DLException'.
 dlOpenExt :: Maybe String -> IO DLHandle
-dlOpenExt = checkDLOpenResult c_lt_dlopenext
+dlOpenExt name = withModuleName name (checkDLOpenResult . c_lt_dlopenext)
 
 -- |Advice for opening a module with 'dlOpenAdvise'.
 data Advice = Ext       -- ^ Try appending libtool and native shared library
@@ -217,12 +227,14 @@ withAdvice flags f =
     setFlag advPtr Preload  = c_lt_dladvise_preload advPtr >>= checkDLResult
 
 -- |Open a module with the requested advice flags. Extensions are appended
--- only when 'Ext' is present. An empty flag list uses the exact file name.
+-- only when 'Ext' is present. An empty flag list uses the exact file name. A
+-- file name that is empty or contains NUL raises t'DLException'.
 dlOpenAdvise :: [Advice] -> Maybe String -> IO DLHandle
 dlOpenAdvise flags name =
+    withModuleName name $ \cname ->
     withAdvice flags $ \advPtr -> do
     adv <- peek advPtr
-    checkDLOpenResult (\cname -> c_lt_dlopenadvise cname adv) name
+    checkDLOpenResult (c_lt_dlopenadvise cname adv)
 
 -- |Decrement the reference count on the module @h@. If it drops to zero and no
 -- other module depends on this module, then the module is unloaded.
