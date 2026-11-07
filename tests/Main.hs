@@ -59,6 +59,13 @@ main = defaultMain $ localOption (NumThreads 1) $ testGroup "libltdl" $
         case result of
             Left _   -> return ()
             Right () -> assertFailure "Closed a resident module"
+    , testCase "symbol name containing NUL raises DLException" $ withLibrary $ do
+        handle <- dlOpen Nothing
+        -- The name before the NUL is a real symbol, which a truncated lookup
+        -- would find.
+        _ <- dlSym handle "lt_dlinit" :: IO (FunPtr ())
+        assertDLException "Found a symbol name containing NUL"
+            (dlSym handle "lt_dlinit\0bad" :: IO (FunPtr ()))
     , testCase "missing module raises DLException" $ withLibrary $ do
         result <- try (dlOpen (Just "/libltdl-test/nonexistent-module"))
             :: IO (Either DLException DLHandle)

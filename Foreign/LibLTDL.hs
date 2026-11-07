@@ -258,14 +258,18 @@ dlClose :: DLHandle -> IO ()
 dlClose h =
     c_lt_dlclose h >>= checkDLResult
 
--- |Return the address of the symbol @name@ in the module @h@.
+-- |Return the address of the symbol @name@ in the module @h@. A name that
+-- contains NUL raises t'DLException'. C would truncate it at the NUL, and
+-- the lookup could return the address of a different symbol.
 dlSym :: DLHandle -> String -> IO (FunPtr a)
-dlSym h name =
-    withCString name $ \cname -> do
-        fptr <- c_lt_dlsym h cname
-        if fptr == nullFunPtr
-          then dlError
-          else return fptr
+dlSym h name
+    | '\NUL' `elem` name = throwIO (DLException "symbol name contains NUL")
+    | otherwise          =
+        withCString name $ \cname -> do
+            fptr <- c_lt_dlsym h cname
+            if fptr == nullFunPtr
+              then dlError
+              else return fptr
 
 -- |Replace the current user-defined library search path with the directories
 -- in @path@, which must be absolute. An empty list clears the search path.

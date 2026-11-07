@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Raise `DLException` in `dlSym` for a symbol name that contains NUL.
+  Previously, the name was truncated at the NUL, so the lookup could return
+  the address of a different symbol.
 - Raise `DLException` in `dlSetSearchPath` and `dlForEachFile` for a directory
   whose name contains the path separator or NUL. Previously, libltdl split it
   at the separator into several directories, and a NUL silently truncated the
