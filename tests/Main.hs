@@ -280,6 +280,19 @@ callbackTests = testGroup "dlForEachFile"
         withLibrary $ withModules $ \path -> do
             result <- dlForEachFile (Just [path]) (\_ -> return 7)
             result @?= 7
+    , testCase "stops at a non-zero result that does not fit in a C int" $
+        withLibrary $ withModules $ \path -> do
+            writeFile (path ++ "/second.so") ""
+            calls <- newIORef (0 :: Int)
+            -- Narrowed to a 32-bit C int, this result is zero. Where Int is no
+            -- wider than that, it is zero here too and the test is empty.
+            let wide = 2 ^ (32 :: Int) :: Int
+            when (wide /= 0) $ do
+                result <- dlForEachFile (Just [path]) $ \_ -> do
+                    readIORef calls >>= writeIORef calls . (+ 1)
+                    return wide
+                result @?= wide
+                readIORef calls >>= (@?= 1)
     , testCase "searches no directories for an empty list" $ withLibrary $ do
         result <- dlForEachFile (Just []) $ \_ ->
             assertFailure "Called back for an empty directory list" >> return 1

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Stop `dlForEachFile` at any non-zero callback result and return that result
+  unchanged. Previously, the result was narrowed to a C `int`, so a non-zero
+  multiple of 2^32 became zero and iteration continued.
 - Raise `DLException` in `dlSym` for a symbol name that contains NUL.
   Previously, the name was truncated at the NUL, so the lookup could return
   the address of a different symbol.

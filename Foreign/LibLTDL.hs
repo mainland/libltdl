@@ -300,7 +300,8 @@ dlGetSearchPath = do
 -- |Iterate over the directory list in @path@, calling @f@ for each module,
 -- until @f@ returns a non-zero result, or until there are no more modules. The
 -- value returned by the last call to @f@ is returned, or 0 if @f@ is never
--- called.
+-- called. A non-zero result stops iteration and is returned unchanged, even
+-- when it does not fit in a C @int@.
 --
 -- @'Just' dirs@ searches only @dirs@, which are subject to the same
 -- restrictions as 'dlSetSearchPath'. 'Nothing' searches the user-defined
@@ -323,6 +324,10 @@ dlForEachFile :: Maybe SearchPath -> (String -> IO Int) -> IO Int
 dlForEachFile path f =
     withNULLCSearchPath path $ \cpath -> mask $ \restore -> do
         failure <- newIORef (Nothing :: Maybe SomeException)
+        -- libltdl passes each callback result through a C int, which cannot
+        -- hold every Int. Keep the last result here, and tell libltdl only
+        -- whether to stop.
+        final <- newIORef 0
         let -- GHC runs each callback on a new Haskell thread, which starts
             -- unmasked whatever the masking state of this thread. Mask the
             -- whole callback and run only the user function in this thread's
@@ -334,19 +339,22 @@ dlForEachFile path f =
                 previous <- readIORef failure
                 case previous of
                     Just _  -> return 1
-                    Nothing -> restore $ do
-                        filename <- peekCString cfilename
-                        f filename >>= evaluate . fromIntegral
+                    Nothing -> do
+                        result <- restore $ do
+                            filename <- peekCString cfilename
+                            f filename >>= evaluate
+                        writeIORef final result
+                        return (if result == 0 then 0 else 1)
             -- Keep the first exception and stop the native iteration.
             record exception = do
                 modifyIORef' failure (maybe (Just exception) Just)
                 return 1
         bracket (mkCallback callback) freeHaskellFunPtr $ \callback' -> do
-            result <- c_lt_dlforeachfile cpath callback' nullPtr
+            _ <- c_lt_dlforeachfile cpath callback' nullPtr
             exception <- readIORef failure
             case exception of
                 Just e  -> throwIO e
-                Nothing -> return (fromIntegral result)
+                Nothing -> readIORef final
 
 -- |Mark a module so that it cannot be closed.
 dlMakeResident :: DLHandle -> IO ()
