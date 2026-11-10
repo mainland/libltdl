@@ -13,7 +13,7 @@ import           Control.Exception        (AsyncException (ThreadKilled),
                                            uninterruptibleMask_)
 import           Control.Monad            (when)
 import           Data.IORef               (newIORef, readIORef, writeIORef)
-import           Data.List                (isPrefixOf)
+import           Data.List                (isInfixOf, isPrefixOf)
 import           Foreign.C.String         (CString, withCString)
 import           Foreign.C.Types          (CInt (..))
 import           Foreign.LibLTDL
@@ -104,7 +104,7 @@ main = defaultMain $ localOption (NumThreads 1) $ testGroup "libltdl" $
             assertCallbackException result
             assertStopped
         ] ++ ordinaryModuleTests
-    ] ++ missingMessageTests
+    ] ++ missingMessageTests ++ residentModuleTests
 
 -- The Linux tests use the libltdl module whose development files are required
 -- to build this package. Keep another initialization active so shutdown cannot
@@ -182,6 +182,40 @@ missingMessageTests
                         message @?= "libltdl failed without an error message"
                     Right _ -> assertFailure "Returned a null symbol address"
         ]
+
+-- Residency cannot be undone, so these tests leave resident modules behind.
+-- They run last, after every test that needs the libltdl module to be
+-- ordinary.
+residentModuleTests :: [TestTree]
+residentModuleTests
+    | os /= "linux" = []
+    | otherwise     =
+        [ testCase "Resident advice makes an ordinary module resident" $
+            withLibrary $ do
+                path <- mappedLibltdl
+                bracket (dlOpen (Just path)) dlClose $ \handle ->
+                    dlIsResident handle >>= (@?= False)
+                handle <- dlOpenAdvise [Resident] (Just path)
+                dlIsResident handle >>= (@?= True)
+                assertDLException "Closed a resident module" (dlClose handle)
+        , testCase "dlMakeResident makes an ordinary module resident" $
+            withLibrary $ do
+                handle <- dlOpen (Just "libltdl.so")
+                dlIsResident handle >>= (@?= False)
+                dlMakeResident handle
+                dlIsResident handle >>= (@?= True)
+                assertDLException "Closed a resident module" (dlClose handle)
+        ]
+
+-- The file that the dynamic loader mapped libltdl from when the test program
+-- started. libltdl keeps one handle for each file name, so this name gives a
+-- handle that is separate from the one for "libltdl.so".
+mappedLibltdl :: IO FilePath
+mappedLibltdl = do
+    maps <- readFile "/proc/self/maps"
+    case filter ("/libltdl.so" `isInfixOf`) (words maps) of
+        path : _ -> return path
+        []       -> assertFailure "libltdl is not mapped into the test program"
 
 -- A native search path cannot represent a directory containing the character.
 invalidDirectoryTest :: String -> Char -> TestTree
