@@ -34,3 +34,10 @@ The package supports GHC 8.0 and later. CI tests the versions listed in
 See the [API documentation](https://hackage.haskell.org/package/libltdl/docs/Foreign-LibLTDL.html)
 for an example of loading with a shared lock, the synchronization requirements,
 and the lifetime of module handles and symbols.
+
+## AI assistance
+
+All contributions included in releases through version `0.1.1.2` were made
+without AI assistance. AI tools were used in development, review, and release
+preparation after that version, through version `0.2.0`. The maintainer remains
+responsible for this release.
