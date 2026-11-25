@@ -1,36 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
 
-- Stop `dlForEachFile` at any non-zero callback result and return that result
-  unchanged. Previously, the result was narrowed to a C `int`, so a non-zero
-  multiple of 2^32 became zero and iteration continued.
-- Raise `DLException` in `dlSym` for a symbol name that contains NUL.
-  Previously, the name was truncated at the NUL, so the lookup could return
-  the address of a different symbol.
-- Raise `DLException` in `dlSetSearchPath` and `dlForEachFile` for a directory
-  whose name contains the path separator or NUL. Previously, libltdl split it
-  at the separator into several directories, and a NUL silently truncated the
-  search path.
-- Raise `DLException` with a fixed message when libltdl fails without an error
-  message, as `dlSym` does for a symbol whose address is zero. Previously, the
-  bindings dereferenced a null pointer.
-- Raise `DLException` for a file name that is empty or contains NUL in
-  `dlOpen`, `dlOpenExt`, `dlOpenAdvise`, and `withDL`. Previously, `dlOpen`
-  aborted the process on a libltdl assertion for an empty name or one beginning
-  with NUL, and a NUL elsewhere silently truncated the name.
-- Document the required process-wide synchronization contract, scoped handle
-  lifetime, and callback locking constraints. Include a caller-owned lock
-  example. The bindings do not acquire a lock.
-- Document the directories that `dlForEachFile Nothing` searches.
+- Report every nonzero status from libltdl as `DLException`, including positive
+  error statuses that were previously ignored. Closing a resident module,
+  including the main program opened by `dlOpen Nothing`, now reports failure.
 - Append module-name extensions in `dlOpenAdvise` only when `Ext` is requested.
-- Destroy advice even when an asynchronous exception arrives immediately after
-  it is initialized. Earlier releases already destroyed it when setting a
-  requested flag or opening the module failed.
-- Catch exceptions from `dlForEachFile` callbacks and rethrow them after
-  returning from C. Run each callback in the masking state of the thread that
-  called `dlForEachFile`. Free callback pointers on all exits, including thread
-  cancellation and exceptions in lazy callback results.
+  Previously, every call appended them, even with an empty advice list.
 - Add `withDL` to initialize libltdl, open a module, and release resources when
   the callback returns or raises an exception. It closes ordinary handles and
   leaves resident handles open, because they cannot be closed. Use the wrapper
@@ -43,9 +19,34 @@
   resident modules. Calling through a pointer into an unloaded module can crash
   the program. A `dlExit` call without a matching `dlInit` now raises
   `DLException`.
-- Report every nonzero status from libltdl as `DLException`, including positive
-  error statuses that were previously ignored. Closing a resident module,
-  including the main program opened by `dlOpen Nothing`, now reports failure.
+- Destroy advice even when an asynchronous exception arrives immediately after
+  it is initialized. Earlier releases already destroyed it when setting a
+  requested flag or opening the module failed.
+- Catch exceptions from `dlForEachFile` callbacks and rethrow them after
+  returning from C. Run each callback in the masking state of the thread that
+  called `dlForEachFile`. Free callback pointers on all exits, including thread
+  cancellation and exceptions in lazy callback results.
+- Stop `dlForEachFile` at any non-zero callback result and return that result
+  unchanged. Previously, the result was narrowed to a C `int`, so a non-zero
+  multiple of 2^32 became zero and iteration continued.
+- Raise `DLException` for a file name that is empty or contains NUL in
+  `dlOpen`, `dlOpenExt`, `dlOpenAdvise`, and `withDL`. Previously, `dlOpen`
+  aborted the process on a libltdl assertion for an empty name or one beginning
+  with NUL, and a NUL elsewhere silently truncated the name.
+- Raise `DLException` in `dlSetSearchPath` and `dlForEachFile` for a directory
+  whose name contains the path separator or NUL. Previously, libltdl split it
+  at the separator into several directories, and a NUL silently truncated the
+  search path.
+- Raise `DLException` in `dlSym` for a symbol name that contains NUL.
+  Previously, the name was truncated at the NUL, so the lookup could return
+  the address of a different symbol.
+- Raise `DLException` with a fixed message when libltdl fails without an error
+  message, as `dlSym` does for a symbol whose address is zero. Previously, the
+  bindings dereferenced a null pointer.
+- Document the required process-wide synchronization contract, scoped handle
+  lifetime, and callback locking constraints. Include a caller-owned lock
+  example. The bindings do not acquire a lock.
+- Document the directories that `dlForEachFile Nothing` searches.
 - Add lifecycle, search-path, module-opening, and error tests on GHC 8.0+.
   Test scoped cleanup on normal return, exceptions, and thread cancellation.
   Run them sequentially because libltdl maintains process-wide state.
@@ -61,3 +62,5 @@
   warnings.
 - Use HTTPS for the source repository, correct package documentation, and
   include the README and changelog in source distributions.
+- Extend Drexel University's copyright years and name it in the module
+  headers.
